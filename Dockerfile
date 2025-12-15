@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1
 
 # 构建阶段
-FROM alpine:3.18 AS builder
+FROM python:3.11-slim AS builder
 
 # 安装构建依赖
-RUN apk add --no-cache \
-  python3 \
-  curl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  curl \
+  && rm -rf /var/lib/apt/lists/*
 
 # 安装 uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -22,7 +22,7 @@ COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev
 
 # 运行阶段
-FROM alpine:3.18 AS runtime
+FROM python:3.11-slim AS runtime
 
 ENV LANG="C.UTF-8" \
   TZ=Asia/Shanghai \
@@ -35,21 +35,16 @@ WORKDIR /app
 
 # 只安装运行时依赖
 RUN set -ex && \
-  apk add --no-cache \
+  apt-get update && apt-get install -y --no-install-recommends \
   bash \
-  busybox-suid \
-  python3 \
-  py3-bcrypt \
   curl \
-  su-exec \
-  shadow \
+  gosu \
   tini \
   openssl \
-  tzdata && \
+  && rm -rf /var/lib/apt/lists/* && \
   mkdir -p /home/ab && \
-  addgroup -S ab -g 911 && \
-  adduser -S ab -G ab -h /home/ab -s /sbin/nologin -u 911 && \
-  rm -rf /var/cache/apk/* /tmp/*
+  groupadd -g 911 ab && \
+  useradd -u 911 -g ab -d /home/ab -s /sbin/nologin ab
 
 # 从构建阶段复制虚拟环境
 COPY --from=builder /build/.venv /app/.venv
