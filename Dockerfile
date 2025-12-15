@@ -5,14 +5,8 @@ FROM alpine:3.18 AS builder
 
 # 安装构建依赖
 RUN apk add --no-cache \
-    python3 \
-    python3-dev \
-    gcc \
-    musl-dev \
-    libffi-dev \
-    rust \
-    cargo \
-    curl
+  python3 \
+  curl
 
 # 安装 uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -31,32 +25,31 @@ RUN uv sync --frozen --no-dev
 FROM alpine:3.18 AS runtime
 
 ENV LANG="C.UTF-8" \
-    TZ=Asia/Shanghai \
-    PUID=1000 \
-    PGID=1000 \
-    UMASK=022 \
-    PATH="/root/.local/bin:$PATH"
+  TZ=Asia/Shanghai \
+  PUID=1000 \
+  PGID=1000 \
+  UMASK=022 \
+  PATH="/root/.local/bin:$PATH"
 
 WORKDIR /app
 
 # 只安装运行时依赖
 RUN set -ex && \
-    apk add --no-cache \
-    bash \
-    busybox-suid \
-    python3 \
-    py3-aiohttp \
-    py3-bcrypt \
-    curl \
-    su-exec \
-    shadow \
-    tini \
-    openssl \
-    tzdata && \
-    mkdir -p /home/ab && \
-    addgroup -S ab -g 911 && \
-    adduser -S ab -G ab -h /home/ab -s /sbin/nologin -u 911 && \
-    rm -rf /var/cache/apk/* /tmp/*
+  apk add --no-cache \
+  bash \
+  busybox-suid \
+  python3 \
+  py3-bcrypt \
+  curl \
+  su-exec \
+  shadow \
+  tini \
+  openssl \
+  tzdata && \
+  mkdir -p /home/ab && \
+  addgroup -S ab -g 911 && \
+  adduser -S ab -G ab -h /home/ab -s /sbin/nologin -u 911 && \
+  rm -rf /var/cache/apk/* /tmp/*
 
 # 从构建阶段复制虚拟环境
 COPY --from=builder /build/.venv /app/.venv
